@@ -1,0 +1,660 @@
+#include <iostream>
+#include <vector>
+#include <ctime>
+#include <cstdlib>
+
+using namespace std;
+
+class Monster 
+{
+protected:
+    string name;
+    int hp;
+    int power;
+    int attack;
+public:
+    virtual void print() = 0;
+    virtual int getHP() = 0;
+    virtual void setHP(int h) = 0;
+    virtual int getpower() = 0;
+    virtual int getAttack() = 0;
+    virtual void applySpecial() = 0;
+    string getName() { return name; }
+};
+
+// 角色基礎類別
+class Character 
+{
+protected:
+    string name;
+    int hp;
+    int level;
+    double power;
+    int attack;
+    bool stun;
+    int aggro;
+    int maxHP;
+public:
+    virtual void print() = 0 ;
+    virtual void attackMonster(Monster* monster) = 0;
+    virtual int getHP() = 0;
+    virtual void setHP(int hp) = 0;
+    virtual int getMAXHP() = 0;
+    virtual int getaggro() = 0;
+    virtual int getpower() = 0;
+    virtual int getAttack() = 0;
+    virtual bool getStun() = 0;
+    virtual void healCharacter(Character* team[]) = 0;
+    string getName() { return name; }
+    void setName(string n) { name = n; }
+};
+
+// 戰士類別
+class Warrior : public Character 
+{
+private:
+    static const int HP_LV = 20;
+    static const int POWER_LV = 6;
+    double attackMultiplier; // 攻擊力加成倍數
+public:
+    Warrior(string n, int lv) 
+	{
+        name = n;
+        level = lv;
+        hp = 200 + HP_LV * level;
+        maxHP=hp;
+        power = 10 + POWER_LV * level;
+        aggro = 8;
+    }
+
+    void print() 
+	{
+        cout << "Warrior " << "level: " << level << " HP: " << hp << " POWER: "
+             << static_cast<int>(power) << "\n";
+    }
+
+    void attackMonster(Monster* monster) 
+	{
+		attack=power;
+        cout << name << " attacks with " << attack << " damage!\n";
+        monster->setHP(monster->getHP() - attack);
+        power *= 1.1;
+    }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getMAXHP() { return maxHP; }
+    int getaggro() { return aggro;}
+    int getAttack() { return attack; }
+    int getpower() { return static_cast<int>(power);}
+    bool getStun() {return false;}
+    void healCharacter(Character* team[]) { }
+};
+
+// 法師類別
+class Wizard : public Character 
+{
+private:
+    static const int HP_LV = 15;
+    static const int POWER_LV = 10;
+    int attackCount; // 攻擊次數計數器
+public:
+    Wizard(string n, int lv) 
+	{
+        name = n;
+        level = lv;
+        hp = 70 + HP_LV * level;
+        maxHP=hp;
+        power = 30 + POWER_LV * level; 
+        aggro = 3;
+        attackCount = 0; 
+    }
+
+    void print()  
+	{
+        cout << "Wizard " << "level: " << level << " HP: " << hp << " POWER: " << power << "\n";
+    }
+
+    void attackMonster(Monster* monster)  
+	{
+        attackCount++; // 攻擊次數累加
+		stun = false;
+        attack = power;  
+        cout << name << " attacks with " <<attack << " damage!\n";
+		monster->setHP(monster->getHP() - attack);
+
+		
+        // 每 3 次攻擊觸發暈眩效果
+        if (attackCount == 3) 
+		{
+            cout << name << " stuns the enemy! The monster cannot attack this turn.\n";
+            attackCount = 0; 
+            stun = true;
+        }
+    }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getMAXHP() { return maxHP; }
+    int getAttack() { return attack; }
+    int getpower() { return static_cast<int>(power);}
+    int getaggro() { return aggro;}
+    bool getStun() { return stun;}
+    void healCharacter(Character* team[]) { }
+};
+
+
+// 射手類別
+class Archer : public Character {
+private:
+    static const int HP_LV = 10;
+    static const int POWER_LV = 8;
+    bool doubleDamage; // 用於追蹤是否雙倍傷害
+
+public:
+    Archer(string n, int lv) 
+	{
+        name = n;
+        level = lv;
+        hp = 60 + HP_LV * level;
+        maxHP=hp;
+        power = 25 + POWER_LV * level;
+        aggro = 3;
+        doubleDamage = false; // 初始化為普通攻擊模式
+    }
+
+    void print() 
+	{
+        cout << "Archer " << "level: " << level << " HP: " << hp << " POWER: " << power << "\n";
+    }
+
+    void attackMonster(Monster* monster) 
+	{
+        if (doubleDamage) 
+		{
+			attack = power*2;
+            cout << name << " attacks double for " << attack << " damage!\n";
+           	monster->setHP(monster->getHP() - attack);
+            doubleDamage = false; // 下一次回到普通攻擊模式
+        } 
+		else 
+		{
+			attack = power;
+            cout << name << " attacks with " << attack << " damage.\n";
+            monster->setHP(monster->getHP() - attack);
+            doubleDamage = true; // 下一次啟用雙倍傷害模式
+        }
+    }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getMAXHP() { return maxHP; }
+    int getaggro() { return aggro;}
+    int getAttack() { return attack; }
+    int getpower() {return static_cast<int>(power);}
+	bool getStun() {return false;}
+	void healCharacter(Character* team[]) { }
+};
+
+// 獵人類別
+class Hunter : public Character 
+{
+private:
+    static const int HP_LV = 10;
+    static const int POWER_LV = 3;
+public:
+    Hunter(string n, int lv) 
+	{
+        name = n;
+        level = lv;
+        hp = 65 + HP_LV * level;
+        maxHP=hp;
+        power = 5 + POWER_LV * level;
+        aggro = 4;
+    }
+
+    void print()  
+	{
+        cout << "Hunter " << "level: " << level << " HP: " << hp << " POWER: " << power << "\n";
+    }
+
+    void attackMonster(Monster* monster) 
+	{
+        attack = power + monster->getHP() / 20; // 取怪物當前 HP 的 %
+		cout << name << " attacks with " << attack << " damage.\n";
+        monster->setHP(monster->getHP() - attack); // 減少怪物的 HP
+    }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getMAXHP() { return maxHP; }
+    int getaggro() { return aggro;}
+    int getAttack() { return attack; }
+    int getpower() {return static_cast<int>(power);}
+    bool getStun() {return false;}
+    void healCharacter(Character* team[]) { }
+};
+
+//補師類別 
+class Healer : public Character 
+{ 
+	private:
+    	static const int HP_LV = 10;
+    	static const int HEAL_LV = 2;
+    	int heal;
+	public:
+		Healer(string n, int lv) 
+		{
+	        name = n;
+	        level = lv;
+	        hp = 150 + HP_LV * level;
+	        maxHP=hp;
+	        power = 0;
+	        aggro = 5;
+	        heal = 10 + HEAL_LV * level;
+	    }
+
+    void print() 
+	{
+        cout << "Healer " << "level: " << level << " HP: " << hp << " POWER: "
+             << static_cast<int>(power) << "\n";
+    }
+
+
+	void healCharacter(Character* team[])
+	{
+		int C;
+		cout << "Choose an character to heal: (ex: 1)\n";
+		cin >> C;
+		if( team[C-1]->getHP() + team[C-1]->getMAXHP() * heal / 100 < team[C-1]->getMAXHP())
+			team[C-1]->setHP( team[C-1]->getHP() + team[C-1]->getMAXHP() * heal / 100 );
+		else
+			team[C-1]->setHP(team[C-1]->getMAXHP());
+		cout << this->getName() << " help " << team[C-1]->getName() << " recover " << team[C-1]->getMAXHP() * heal / 100 << "hp\n";
+	}
+	
+    void attackMonster(Monster* monster) { }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getMAXHP() { return maxHP; }
+    int getaggro() { return aggro;}
+    int getAttack() { return attack; }
+    int getpower() { return static_cast<int>(power);}
+    bool getStun() {return false;}
+};		
+
+// 哥布林
+class Goblin : public Monster
+{
+public:
+    Goblin() 
+	{
+        name = "Goblin";
+        hp = 1000;
+        power = 60;
+        attack = power;
+    }
+
+    void print() 
+	{
+        cout << name << " HP: " << hp << " POWER: " << power << "\n";
+    }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getAttack() { return attack; }
+    int getpower() {return power;}
+    void applySpecial() {}
+};
+
+// 石頭怪
+class StoneMonster : public Monster 
+{
+public:
+    StoneMonster() 
+	{
+        name = "StoneMonster";
+        hp = 2000;
+        power = 80;
+        attack = power;
+    }
+
+    void print() 
+	{
+        cout << name << " HP: " << hp << " POWER: " << power << "\n";
+    }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getAttack() { return attack; }
+    int getpower() {return power;}
+    void applySpecial() 
+	{
+        if (hp < 2000) 
+		{
+            hp += 100;
+            if (hp > 2000) 
+				hp = 2000;
+            cout << name << " heals itself for 1001 HP!\n";
+        }
+    }
+};
+
+// 地獄三頭犬
+class Cerberus : public Monster 
+{
+private:
+    int attackCycle;
+public:
+    Cerberus() 
+	{
+        name = "Cerberus";
+        hp = 3000;
+        power = 60;
+        attackCycle = 1;
+    }
+
+    void print() 
+	{
+		if (hp < 1000) 
+		{
+            name = "Cerberus (Enrage!!!)";
+        }
+        cout << name << " HP: " << hp << " POWER: " << power << "\n";
+        
+    }
+
+    int getHP() { return hp; }
+    void setHP(int h) { hp = h; }
+    int getAttack() { return attack; }
+    int getpower() {return power;}
+    void applySpecial() 
+	{
+        if (attackCycle == 1) 
+		{
+			if(hp > 1000)
+            	attack = 60;
+            else
+            	attack = 100;
+        } 
+		else if (attackCycle == 2) 
+		{
+            if(hp > 1000)
+            	attack = 120;
+            else
+            	attack = 200;
+        } 
+		else 
+		{
+            if(hp > 1000)
+            	attack = 180;
+            else
+            	attack = 300;
+        }
+        cout << name << " changes power to " << attack << " for this cycle!\n";
+        power=attack;
+        attackCycle++;
+        if (attackCycle > 3) 
+			attackCycle = 1;
+    }
+};
+
+// 戰鬥函數
+void combat(Character* team[], Monster* monster) 
+{
+    int round = 1; // 記錄目前的回合數
+	 
+    while (true) 
+	{
+		int survivor=0;//紀錄存活數
+		
+        // 顯示回合資訊
+        cout << "----- 第 " << round << " 回合 -----\n";
+
+        // 顯示角色與怪物狀態
+        cout << "Characters:\n";
+        for (int i = 0; i < 3; ++i) 
+		{
+            team[i]->print();
+            if (team[i]->getHP() > 0) 
+			{
+                survivor++;
+            }
+        }
+
+        // 顯示怪物狀態
+        cout << "Monster:\n";
+        monster->print();
+
+        // 玩家選擇角色攻擊
+        int a=0, b=0;
+        
+        if(survivor >= 2)
+        {
+        	do{
+        		cout << "Select two characters to attack: (ex: 1 2)\n";
+		        cin >> a >> b;
+		        if(team[a-1]->getHP() <= 0) 
+		        	cout << "The first charactor is dead.\n";
+		        if(team[b-1]->getHP() <= 0) 
+		        	cout << "The second charactor is dead.\n";
+			}while(team[a-1]->getHP() <= 0 || team[b-1]->getHP() <= 0);
+	        
+			
+	        // 處理第一個角色的攻擊
+	        team[a - 1]->healCharacter(team); 
+	    	team[a - 1]->attackMonster(monster); 
+	
+	        // 處理第二個角色的攻擊
+	        team[b - 1]->healCharacter(team); 
+	        team[b - 1]->attackMonster(monster); 
+		}
+		else
+		{
+			cout << "Select only one character to attack: (ex: 1)\n";
+			while(cin >> a) 
+				if(team[a-1]->getHP() == 0) 
+				    cout << "The charactor is dead.Please re-enter a role.\n";
+				else 
+					break;
+			
+			// 處理角色的攻擊
+			team[a - 1]->healCharacter(team);
+	    	team[a - 1]->attackMonster(monster); 
+		}
+	
+		 // 檢查是否結束
+        if (monster->getHP() <= 0) 
+		{
+            cout << "VICTORY !!!\n";
+            cout << "Remaining characters:\n";
+            for (int i = 0; i < 3; ++i) 
+			{
+                if (team[i]->getHP() > 0) 
+				{
+                    team[i]->print(); // 顯示還活著的角色
+                }
+            }
+            break;
+        }
+       
+        if( survivor>=2 )
+		{
+			if(team[a-1]->getStun() || team[b-1]->getStun())
+        		cout << "The monster is stunned for this turn.\n";
+	        else
+	        {
+		        // 怪物特殊能力
+		        monster->applySpecial();  // 確保怪物的特殊技能在攻擊後執行
+		
+		        // 顯示怪物治療後的狀態
+		        monster->print();
+		
+		        // 怪物攻擊
+		        cout << "Monster attacks!\n";
+		
+		        // 計算活著的角色數量
+		        int aliveCount = 0;
+		        for (int i = 0; i < 3; ++i) 
+				{
+		            if (team[i]->getHP() > 0) 
+					{
+		                ++aliveCount;
+		            }
+		        }
+		
+		        // 如果有存活的角色，計算傷害
+		        if (aliveCount > 0) 
+				{
+					int allAggro = 0;
+					for(int i=0; i<3; i++)
+					{
+						if(team[i]->getHP() > 0 )
+							allAggro=allAggro + team[i]->getaggro();
+					}
+						
+		
+		            // 對所有存活角色造成傷害
+		            for (int i = 0; i < 3; ++i) 
+					{
+		                if (team[i]->getHP() > 0) 
+						{
+							int damage =monster->getAttack() * team[i]->getaggro() / allAggro;
+		                    team[i]->setHP(team[i]->getHP() - damage);
+		                    if(team[i]->getHP() <=0)
+		                    	team[i]->setHP(0);
+		                    cout << team[i]->getName() << " takes " << damage << " damage! Remaining HP: " << team[i]->getHP() << "\n";
+		                }
+		            }
+		        }	
+			}
+		}
+		else
+		{
+			if(team[a-1]->getStun())
+	        	cout << "The monster is stunned for this turn.\n";
+	        else
+	        {
+		        // 怪物特殊能力
+		        monster->applySpecial();  // 確保怪物的特殊技能在攻擊後執行
+		
+		        // 顯示怪物治療後的狀態
+		        monster->print();
+		
+		        // 怪物攻擊
+		        cout << "Monster attacks!\n";
+		
+		        // 計算活著的角色數量
+		        int aliveCount = 0;
+		        for (int i = 0; i < 3; ++i) 
+				{
+		            if (team[i]->getHP() > 0) 
+					{
+		                ++aliveCount;
+		            }
+		        }
+		
+		        // 如果有存活的角色，計算傷害
+		        if (aliveCount > 0) 
+				{
+					int allAggro = 0;
+					for(int i=0; i<3; i++)
+					{
+						if(team[i]->getHP() > 0 )
+							allAggro=allAggro + team[i]->getaggro();
+					}
+						
+		
+		            // 對所有存活角色造成傷害
+		            for (int i = 0; i < 3; ++i) 
+					{
+		                if (team[i]->getHP() > 0) 
+						{
+							int damage =monster->getAttack() * team[i]->getaggro() / allAggro;
+		                    team[i]->setHP(team[i]->getHP() - damage);
+		                    if(team[i]->getHP() <=0)
+		                    	team[i]->setHP(0);
+		                    cout << team[i]->getName() << " takes " << damage << " damage! Remaining HP: " << team[i]->getHP() << "\n";
+		                }
+		            }
+		        }	
+			}
+		}
+
+        // 檢查角色是否死亡
+        bool allDead = true;
+        for (int i = 0; i < 3; ++i) 
+		{
+            if (team[i]->getHP() > 0) 
+			{
+                allDead = false;
+                break;
+            }
+        }
+
+        if (allDead) 
+		{
+            cout << "DEFEAT...\n";
+            cout << "Remaining monster status:\n";
+            monster->print(); // 顯示怪物剩餘狀態
+            break;
+        }
+
+        // 下一回合
+        ++round;
+    }
+}
+
+int main() 
+{
+    Character* team[3];
+    string name;
+    int level, role;
+
+    // 角色選擇
+    for (int i = 0; i < 3; i++) 
+	{
+        cout << "Enter character name and level (1-15):\n";
+        cin >> name >> level;
+
+        cout << "Select role: 1. Warrior 2. Wizard 3. Archer 4. Hunter 5. Healer\n";
+        cin >> role;
+
+        if(role==1)
+            team[i]=new Warrior(name, level); 
+        else if(role==2)
+            team[i]=new Wizard(name, level);
+        else if(role==3)
+            team[i]=new Archer(name, level);
+        else if(role==4)
+            team[i]=new Hunter(name, level);
+        else 
+            team[i]=new Healer(name, level);
+    }
+
+    // 選擇怪物
+    int monsterChoice;
+    cout << "Choose a monster: 1. Goblin 2. StoneMonster 3. Cerberus\n";
+    cin >> monsterChoice;
+
+    Monster* monster;
+    if(monsterChoice==1)
+        monster = new Goblin();
+    if(monsterChoice==2)
+        monster = new StoneMonster();
+    if(monsterChoice==3)
+        monster = new Cerberus();
+    
+
+    // 開始戰鬥
+    combat(team, monster);
+
+    // 清理記憶體
+    for (size_t i = 0; i < 3; ++i) {
+        delete team[i];
+    }
+    delete monster;
+
+    return 0;
+}
